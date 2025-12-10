@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Device Control Panel</title>
+
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+    color: #fff;
+    height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1 { text-align: center; font-weight: 300; margin: 20px 0; }
+
+  /* TOP LED STRIP SIMULATION */
+  #ledStripPreview {
+    width: 100%;
+    height: 20px;
+    background: black;
+    display: flex;
+  }
+  .ledPixel {
+    flex: 1;
+    transition: background 0.2s;
+  }
+
+  /* GLASS CARDS */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 520px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    margin: 12px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    transition: 0.25s;
+  }
+  button:hover { background: rgba(255,255,255,0.22); }
+
+  /* HAMBURGER */
+  .hamburger { position: absolute; top: 15px; left: 15px; width: 35px; cursor: pointer; z-index: 10; }
+  .hamburger div { width: 100%; height: 5px; background: #fff; margin: 6px 0; border-radius: 4px; }
+
+  /* SIDE MENU */
+  #sideMenu {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    width: 250px;
+    height: 100%;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    transition: 0.3s;
+    border-right: 1px solid rgba(255,255,255,0.15);
+    z-index: 9;
+  }
+
+  /* MAIN */
+  #mainContent { margin-top: 80px; padding: 20px; text-align: center; }
+
+  /* COLOR TOOLS */
+  .palette { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .color-btn {
+    width: 45px; height: 45px; border-radius: 12px; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  #colorWheel { width: 200px; height: 200px; border-radius: 50%; cursor: crosshair; margin: 0 auto 20px auto; }
+  #hexInput { width: 180px; padding: 10px; border-radius: 10px; border: none; font-size: 16px; margin-top: 10px; text-align: center; }
+
+  /* STATUS BAR */
+  #statusBar {
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(8px);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .dot { width: 16px; height: 16px; border-radius: 50%; background: red; }
+</style>
+</head>
+<body>
+
+<!-- SIMULATED LED STRIP -->
+<div id="ledStripPreview"></div>
+<script>
+  for (let i = 0; i < 50; i++) {
+    let px = document.createElement('div');
+    px.className = 'ledPixel';
+    document.getElementById('ledStripPreview').appendChild(px);
+  }
+</script>
+
+<!-- HAMBURGER -->
+<div class="hamburger" onclick="toggleMenu()">
+  <div></div><div></div><div></div>
+</div>
+
+<!-- SIDE MENU -->
+<div id="sideMenu">
+  <h2>Connections</h2>
+  <button onclick="scanWiFi()">Scan Network</button>
+  <button onclick="connectBT()">Bluetooth Search</button>
+  <button onclick="pairSensor()">Pair Sensor</button>
+  <p id="menuStatus"></p>
+</div>
+
+<div id="mainContent">
+  <h1>Lighting Controller</h1>
+
+  <!-- COLOR WHEEL IN CENTER GLASS CARD -->
+  <div class="glass-card" style="max-width:420px; margin-top:10px; margin-bottom:20px;">
+    <h2 style="margin-top:0;">Color Wheel</h2>
+    <canvas id="colorWheel" style="display:block; margin:0 auto 20px auto;"></canvas>
+    <input id="hexInput" placeholder="#FFFFFF" oninput="hexColor(this.value)">
+  </div>
+
+  <!-- QUICK COLORS --> -->
+  <div class="palette">
+    <div class="color-btn" style="background:red" onclick="setColor(255,0,0)"></div>
+    <div class="color-btn" style="background:lime" onclick="setColor(0,255,0)"></div>
+    <div class="color-btn" style="background:blue" onclick="setColor(0,0,255)"></div>
+    <div class="color-btn" style="background:yellow" onclick="setColor(255,255,0)"></div>
+    <div class="color-btn" style="background:purple" onclick="setColor(128,0,255)"></div>
+    <div class="color-btn" style="background:white" onclick="setColor(255,255,255)"></div>
+  </div>
+
+  <!-- EFFECTS DROPDOWN -->
+  <div class="glass-card">
+    <h2>Effects</h2>
+    <select id="effectSelect" onchange="setEffect(this.value)" style="width:100%; padding:12px; border-radius:12px; font-size:18px; background:rgba(255,255,255,0.1); color:#fff;">
+      <option value="0">Static</option>
+      <option value="1">Rainbow</option>
+      <option value="2">Color Wipe</option>
+      <option value="3">Fade</option>
+      <option value="4">Scanner</option>
+      <option value="5">Ants Running</option>
+      <option value="6">Sparkle</option>
+      <option value="7">Fire Flicker</option>
+      <option value="8">Pulse</option>
+      <option value="9">Twinkle</option>
+      <option value="10">Chase</option>
+      <option value="11">Strobe</option>
+      <option value="12">Wave</option>
+      <option value="13">Meteor</option>
+      <option value="14">Aurora</option>
+      <option value="15">Color Cycle</option>
+      <option value="16">Electric Storm</option>
+    </select>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusBar">
+  <div style="text-align:center"><span>📶</span><div class="dot" id="wifiDot"></div></div>
+  <div style="text-align:center"><span>🔵</span><div class="dot" id="btDot"></div></div>
+  <div style="text-align:center"><span>📟</span><div class="dot" id="sensorDot"></div></div>
+</div>
+
+<script>
+let controllerBaseUrl = "http://device.local";
+
+function toggleMenu(){
+  const m = document.getElementById('sideMenu');
+  m.style.left = m.style.left === '0px' ? '-260px' : '0px';
+}
+function setDot(id, ok){ document.getElementById(id).style.background = ok ? '#0f0' : '#f00'; }
+
+// LED STRIP PREVIEW UPDATE
+function previewColor(r,g,b){
+  document.querySelectorAll('.ledPixel').forEach(px => px.style.background = `rgb(${r},${g},${b})`);
+}
+
+function setColor(r,g,b){
+  previewColor(r,g,b);
+  fetch(`${controllerBaseUrl}/color?r=${r}&g=${g}&b=${b}`).catch(()=>{});
+}
+
+function hexColor(hex){
+  if(!/^#?[0-9A-F]{6}$/i.test(hex)) return;
+  hex = hex.replace('#','');
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  setColor(r,g,b);
+}
+
+function setEffect(e){ fetch(`${controllerBaseUrl}/effect?v=${e}`).catch(()=>{}); }
+
+// COLOR WHEEL GENERATION
+const canvas = document.getElementById('colorWheel');
+const ctx = canvas.getContext('2d');
+const size = 200;
+canvas.width = size;
+canvas.height = size;
+
+function drawWheel(){
+  const radius = size/2;
+  const img = ctx.createImageData(size, size);
+  for(let y = 0; y < size; y++){
+    for(let x = 0; x < size; x++){
+      const dx = x - radius;
+      const dy = y - radius;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const angle = Math.atan2(dy, dx);
+      const h = (angle * 180 / Math.PI + 360) % 360;
+      const s = Math.min(dist / radius, 1);
+      const v = 1;
+      const rgb = hsvToRgb(h, s, v);
+      const index = (y * size + x) * 4;
+      if(dist <= radius){
+        img.data[index] = rgb[0];
+        img.data[index+1] = rgb[1];
+        img.data[index+2] = rgb[2];
+        img.data[index+3] = 255;
+      } else {
+        img.data[index+3] = 0;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+drawWheel();
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const pix = ctx.getImageData(x, y, 1, 1).data;
+  setColor(pix[0], pix[1], pix[2]);
+  document.getElementById('hexInput').value = rgbToHex(pix[0], pix[1], pix[2]);
+});
+
+function hsvToRgb(h, s, v){
+  let c = v * s;
+  let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  let m = v - c;
+  let r, g, b;
+  if(h < 60){ r=c; g=x; b=0; }
+  else if(h<120){ r=x; g=c; b=0; }
+  else if(h<180){ r=0; g=c; b=x; }
+  else if(h<240){ r=0; g=x; b=c; }
+  else if(h<300){ r=x; g=0; b=c; }
+  else { r=c; g=0; b=x; }
+  return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+}
+
+function rgbToHex(r,g,b){ return '#' + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase(); }
+
